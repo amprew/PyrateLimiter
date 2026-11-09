@@ -516,14 +516,14 @@ class BucketFactory(ABC):
                 self._leaker.close()
                 self._leaker = None
         except Exception as e:
-            logger.info("Exception %s (%s) deleting bucket %r", type(e).__name__, e, self._leaker)
+            logger.info("Exception %s (%s) closing leaker %r", type(e).__name__, e, self._leaker)
 
         for bucket in buckets:
             try:
                 logger.debug("Closing bucket %s", bucket)
                 bucket.close()
             except Exception as e:
-                logger.info("Exception %s (%s) deleting bucket %r", type(e).__name__, e, bucket)
+                logger.info("Exception %s (%s) closing bucket %r", type(e).__name__, e, bucket)
 
     def __getstate__(self):
         """Get state for pickling"""
