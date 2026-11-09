@@ -1,7 +1,9 @@
 """C5 (#305): the Leaker prefers a bucket's declared ``is_async`` and only
 falls back to the side-effecting ``leak(0)`` probe when it is ``None``.
 """
-from pyrate_limiter import AbstractBucket, BucketAsyncWrapper, InMemoryBucket, Rate
+import asyncio
+
+from pyrate_limiter import AbstractBucket, BucketAsyncWrapper, InMemoryBucket, Limiter, Rate
 from pyrate_limiter.abstracts.bucket import Leaker
 
 RATES = [Rate(3, 1000)]
@@ -72,3 +74,22 @@ def test_unknown_falls_back_to_probe():
     assert bucket.is_async is None
     leaker.register(bucket)  # probes leak(0) -> coroutine -> async
     assert id(bucket) in leaker.async_buckets
+
+
+def test_async_bucket_limiter_can_be_created_outside_event_loop():
+    limiter = Limiter(BucketAsyncWrapper(InMemoryBucket(RATES)))
+    leaker = limiter.bucket_factory._leaker
+
+    assert leaker is not None
+    assert leaker.aio_leak_task is None
+
+    async def acquire_and_close():
+        assert await limiter.try_acquire_async("item")
+        task = leaker.aio_leak_task
+        assert task is not None
+
+        limiter.close()
+        await asyncio.gather(task, return_exceptions=True)
+        assert task.cancelled()
+
+    asyncio.run(acquire_and_close())

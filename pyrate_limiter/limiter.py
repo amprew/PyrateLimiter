@@ -433,6 +433,9 @@ class Limiter:
         return _resolve_result(result)
 
     async def _acquire_async(self, blocking, name, weight, timeout=-1):
+        leaker = self.bucket_factory._leaker
+        if leaker is not None:
+            leaker.leak_async()
         return await self._handle_async_result(self._try_acquire(name, weight, blocking=blocking, timeout=timeout, _force_async=True))
 
     async def try_acquire_async(self, name: str = "pyrate", weight: int = 1, blocking: bool = True, timeout: int | float = -1) -> bool:
